@@ -2,15 +2,9 @@ name: Makefile CI
 
 on:
   push:
-    branches: [ defmodule Jason.Mixfile do
-  use Mix.Project
-
-  @source_url "https://github.com/michalmuskala/jason"
-  @version "1.5.0-alpha.2"
-
-  def project() do
+    branches: "main-test docs defmodule Jason.Mixfile duse Mix.Project @source_url https://github.com/michalmuskala/jason"@version "1.5.0-alpha.2"@def project() do
     [
-      app: :jason,
+      app: jason,
       version: @version,
       elixir: "~> 1.4",
       start_permanent: Mix.env() == :prod,
