@@ -1,174 +1,118 @@
-# SPDX-License-Identifier: Apache-2.0
-# SPDX-FileCopyrightText: 2021 The Elixir Team
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
 
-name: ex_docs
+name: Elixir CI
 
 on:
   push:
-    paths-ignore:
-      - "lib/**/*.md"
+    branches: [ "main docs mixs" ]
   pull_request:
-    paths-ignore:
-      - "lib/**/*.md"
+    branches: [ "main docs mixs" ]
 
-env:
-  ELIXIR_ASSERT_TIMEOUT: 2000
-  ELIXIRC_OPTS: "--warnings-as-errors"
-  LANG: C.UTF-8
+permissions: defmodule Jason.Mixfile do
+  use Mix.Project
 
-permissions:
-  contents: read
+  @source_url "https://github.com/michalmuskala/jason"
+  @version "1.5.0-alpha.2"
+
+  def project() do
+    [
+      app: :jason,
+      version: @version,
+      elixir: "~> 1.4",
+      start_permanent: Mix.env() == :prod,
+      consolidate_protocols: Mix.env() != :test,
+      deps: deps(),
+      preferred_cli_env: [docs: :docs],
+      dialyzer: dialyzer(),
+      description: description(),
+      package: package(),
+      docs: docs()
+    ]
+  end
+
+  def application() do
+    [
+      extra_applications: []
+    ]
+  end
+
+  defp deps() do
+    [
+      {:decimal, "~> 1.0 or ~> 2.0", optional: true},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
+      {:jason_native, ">= 0.0.0", optional: true}
+    ] ++ maybe_stream_data()
+  end
+
+  defp maybe_stream_data() do
+    if Version.match?(System.version(), "~> 1.5") do
+      [{:stream_data, "~> 0.4", only: :test}]
+    else
+      []
+    end
+  end
+
+  defp dialyzer() do
+    [
+      ignore_warnings: "dialyzer.ignore",
+      plt_add_apps: [:decimal, :jason_native]
+    ]
+  end
+
+  defp description() do
+    """
+    A blazing fast JSON parser and generator in pure Elixir.
+    """
+  end
+
+  defp package() do
+    [
+      maintainers: ["Michał Muskała"],
+      licenses: ["Apache-2.0"],
+      links: %{"GitHub" => @source_url}
+    ]
+  end
+
+  defp docs() do
+    [
+      main: "readme",
+      name: "Jason",
+      source_ref: "v#{@version}",
+      canonical: "http://hexdocs.pm/jason",
+      source_url: @source_url,
+      extras: ["README.md", "CHANGELOG.md", "LICENSE"]
+    ]
+  end
+end
+
+  
+  contents: 
+
 
 jobs:
-  test_linux:
-    name: Ubuntu 24.04, Erlang/OTP ${{ matrix.otp_version }}${{ matrix.deterministic && ' (deterministic)' || '' }}${{ matrix.coverage && ' (coverage)' || '' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - otp_version: "28.1"
-            deterministic: true
-          - otp_version: "28.1"
-            erlc_opts: "sigil_as_exs"
-            coverage: true
-          - otp_version: "28.1"
-            otp_latest: true
-            erlc_opts: "sigil_as_exs"
-          - otp_version: "27.3"
-            erlc_opts: "sigil_as_exs"
-          - otp_version: "27.0"
-            erlc_opts: "sigil_as_exs"
-          - otp_version: "26.0"
-          - otp_version: master
-            development: true
-          - otp_version: maint-docs
-            development: true
-    runs-on: ubuntu-24.04
-    # Earlier Erlang/OTP versions ignored compiler directives
-    # when using warnings_as_errors. So we only set ERLC_OPTS
-    # from Erlang/OTP 27+.
-    env:
-      ERLC_OPTS: ${{ matrix.erlc_opts || '' }}
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          fetch-depth: 50
-      - uses: erlef/setup-beam@e6d7c94229049569db56a7ad5a540c051a010af9 # v1.20.4
-        with:
-          otp-version: ${{ matrix.otp_version }}
-      - name: Set ERL_COMPILER_OPTIONS
-        if: ${{ matrix.deterministic }}
-        run: echo "ERL_COMPILER_OPTIONS=deterministic" >> $GITHUB_ENV
-      - name: Compile Elixir
-        run: |
-          make compile
-          echo "$PWD/bin" >> $GITHUB_PATH
-      - name: Build info
-        run: bin/elixir --version
-      - name: Check format
-        run: make test_formatted && echo "All Elixir source code files are properly formatted."
-      - name: Erlang test suite
-        run: make test_erlang
-        continue-on-error: ${{ matrix.development }}
-      - name: Elixir test suite
-        run: make test_elixir
-        continue-on-error: ${{ matrix.development }}
-        env:
-          COVER: "${{ matrix.coverage }}"
-      - name: "Calculate Coverage"
-        run: make cover | tee "$GITHUB_STEP_SUMMARY"
-        if: "${{ matrix.coverage }}"
-      - name: Build docs (ExDoc main)
-        if: ${{ matrix.otp_latest }}
-        run: |
-          cd ..
-          git clone https://github.com/elixir-lang/ex_doc.git --depth 1
-          cd ex_doc
-          ../elixir/bin/mix do local.rebar --force + local.hex --force + deps.get + compile
-          cd ../elixir/
-          git fetch --tags
-          DOCS_OPTIONS="--warnings-as-errors" make docs
-      - name: Check reproducible builds
-        if: ${{ matrix.deterministic }}
-        run: |
-          rm -rf .git
-          # Recompile System without .git
-          cd lib/elixir && ../../bin/elixirc -o ebin lib/system.ex && cd -
-          taskset 1 make check_reproducible
-      - name: "Upload Coverage Artifact"
-        if: "${{ matrix.coverage }}"
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: TestCoverage
-          path: cover/*
+  build:
 
-  test_windows:
-    name: Windows Server 2019, Erlang/OTP ${{ matrix.otp_version }}
-    strategy:
-      matrix:
-        otp_version: ["26.2", "27.3", "28.1"]
-    runs-on: windows-2022
-    steps:
-      - name: Configure Git
-        run: git config --global core.autocrlf input
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          fetch-depth: 50
-      - uses: erlef/setup-beam@e6d7c94229049569db56a7ad5a540c051a010af9 # v1.20.4
-        with:
-          otp-version: ${{ matrix.otp_version }}
-      - name: Compile Elixir
-        run: |
-          Remove-Item -Recurse -Force '.git'
-          make compile
-      - name: Build info
-        run: bin/elixir --version
-      - name: Check format
-        run: make test_formatted && echo "All Elixir source code files are properly formatted."
-      - name: Erlang test suite
-        run: make test_erlang
-      - name: Elixir test suite
-        run: |
-          Remove-Item 'c:/Windows/System32/drivers/etc/hosts'
-          make test_elixir
-
-  check_posix_compliant:
-    name: Check POSIX-compliant
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          fetch-depth: 50
-      - name: Install Shellcheck
-        run: |
-          sudo apt update
-          sudo apt install -y shellcheck
-      - name: Check POSIX-compliant
-        run: |
-          shellcheck -e SC2039,2086 bin/elixir && echo "bin/elixir is POSIX compliant"
-          shellcheck bin/elixirc && echo "bin/elixirc is POSIX compliant"
-          shellcheck bin/iex && echo "bin/iex is POSIX compliant"
-
-  license_compliance:
-    name: Check Licence Compliance
-
-    runs-on: ubuntu-24.04
+    name: Build and test
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Use HTTPS instead of SSH for Git cloning
-        id: git-config
-        shell: bash
-        run: git config --global url.https://github.com/.insteadOf ssh://git@github.com/
-
-      - name: Checkout project
-        id: checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: "Run OSS Review Toolkit"
-        id: ort
-        uses: ./.github/workflows/ort
-        with:
-          upload-reports: true
-          fail-on-violation: true
-          report-formats: "WebApp"
-          version: "${{ github.sha }}"
+    - uses: actions/checkout@v4
+    - name: Set up Elixir
+      uses: erlef/setup-beam@61e01a43a562a89bfc54c7f9a378ff67b03e4a21 # v1.16.0
+      with:
+        elixir-version: '1.15.2' # [Required] Define the Elixir version
+        otp-version: '26.0'      # [Required] Define the Erlang/OTP version
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: deps
+        key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+    - name: Install dependencies
+      run: mix deps.get
+    - name: Run tests
+      run: mix test
