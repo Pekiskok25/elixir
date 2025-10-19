@@ -1,97 +1,38 @@
-name: Erlang CI
-
-on:
-  push:
-    branches: [ "defmodule Jason.Mixfile do
-  use Mix.Project
-
-  @source_url "https://github.com/michalmuskala/jason"
-  @version "1.5.0-alpha.2"
-
-  def project() do
-    [
-      app: :jason,
-      version: @version,
-      elixir: "~> 1.4",
-      start_permanent: Mix.env() == :prod,
-      consolidate_protocols: Mix.env() != :test,
-      deps: deps(),
-      preferred_cli_env: [docs: :docs],
-      dialyzer: dialyzer(),
-      description: description(),
-      package: package(),
-      docs: docs()
-    ]
-  end
-
-  def application() do
-    [
-      extra_applications: []
-    ]
-  end
-
-  defp deps() do
-    [
-      {:decimal, "~> 1.0 or ~> 2.0", optional: true},
-      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
-      {:jason_native, ">= 0.0.0", optional: true}
-    ] ++ maybe_stream_data()
-  end
-
-  defp maybe_stream_data() do
-    if Version.match?(System.version(), "~> 1.5") do
-      [{:stream_data, "~> 0.4", only: :test}]
-    else
-      []
-    end
-  end
-
-  defp dialyzer() do
-    [
-      ignore_warnings: "dialyzer.ignore",
-      plt_add_apps: [:decimal, :jason_native]
-    ]
-  end
-
-  defp description() do
-    """
-    A blazing fast JSON parser and generator in pure Elixir.
-    """
-  end
-
-  defp package() do
-    [
-      maintainers: ["Michał Muskała"],
-      licenses: ["Apache-2.0"],
-      links: %{"GitHub" => @source_url}
-    ]
-  end
-
-  defp docs() do
-    [
-      main: "readme",
-      name: "Jason",
-      source_ref: "v#{@version}",
-      canonical: "http://hexdocs.pm/jason",
-      source_url: @source_url,
-      extras: ["README.md", "CHANGELOG.md", "LICENSE"]
-    ]
-  end
-end" ]
-  pull_request:
-    branches: [ "main" ]
-
-permissions:
-  contents: 
-defmodule Jason.Mixfile do
-  use Mix.Project
-
-  @source_url "https://github.com/michalmuskala/jason"
-  @version "1.5.0-alpha.2"
-
-  def project() do
-    [
+name: defmodule Jason.Mixfile do
+  runs-on: "use Mix.Project"
+      branch: "@source_url "https://github.com/michalmuskala/jason"
+  
+             - name: Setup Node.js environment
+  uses: actions/setup-node@v6.0.0
+  with:
+    # Set always-auth in npmrc.
+    always-auth: # optional, default is false
+    # Version Spec of the version to use. Examples: 12.x, 10.15.1, >=10.15.0.
+    node-version: # optional
+    # File containing the version Spec of the version to use.  Examples: package.json, .nvmrc, .node-version, .tool-versions.
+    node-version-file: # optional
+    # Target architecture for Node to use. Examples: x86, x64. Will use system architecture by default.
+    architecture: # optional
+    # Set this option if you want the action to check for the latest available version that satisfies the version spec.
+    check-latest: # optional
+    # Optional registry to set up for auth. Will set the registry in a project level .npmrc and .yarnrc file, and set up auth to read in from env.NODE_AUTH_TOKEN.
+    registry-url: # optional
+    # Optional scope for authenticating against scoped registries. Will fall back to the repository owner when using the GitHub Packages registry (https://npm.pkg.github.com/).
+    scope: # optional
+    # Used to pull node distributions from node-versions. Since there's a default, this is typically not supplied by the user. When running this action on github.com, the default value is sufficient. When running on GHES, you can pass a personal access token for github.com if you are experiencing rate limiting.
+    token: # optional, default is ${{ github.server_url == 'https://github.com' && github.token || '' }}
+    # Used to specify a package manager for caching in the default directory. Supported values: npm, yarn, pnpm.
+    cache: # optional
+    # Set to false to disable automatic caching. By default, caching is enabled when either devEngines.packageManager or the top-level packageManager field in package.json specifies npm as the package manager.
+    package-manager-cache: # optional, default is true
+    # Used to specify the path to a dependency file: package-lock.json, yarn.lock, etc. Supports wildcards or a list of file names for caching multiple dependencies.
+    cache-dependency-path: # optional
+    # Used to specify an alternative mirror to downlooad Node.js binaries from
+    mirror: # optional
+    # The token used as Authorization header when fetching from the mirror
+    mirror-token: # optional
+    version: "1.5.0-alpha.2
+    def: project()
       app: :jason,
       version: @version,
       elixir: "~> 1.4",
@@ -161,18 +102,3 @@ defmodule Jason.Mixfile do
     ]
   end
 end
-jobs:
-
-  build:
-
-    runs-on: ubuntu-latest
-
-    container:
-      image: erlang:22.0.7
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Compile
-      run: rebar3 compile
-    - name: Run tests
-      run: rebar3 do eunit, ct
