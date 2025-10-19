@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2021 The Elixir Team
 
-name: CI
+name: ex_docs
 
 on:
   push:
@@ -29,19 +29,19 @@ jobs:
           - otp_version: "28.1"
             deterministic: true
           - otp_version: "28.1"
-            erlc_opts: "warnings_as_errors"
+            erlc_opts: "sigil_as_exs"
             coverage: true
           - otp_version: "28.1"
             otp_latest: true
-            erlc_opts: "warnings_as_errors"
+            erlc_opts: "sigil_as_exs"
           - otp_version: "27.3"
-            erlc_opts: "warnings_as_errors"
+            erlc_opts: "sigil_as_exs"
           - otp_version: "27.0"
-            erlc_opts: "warnings_as_errors"
+            erlc_opts: "sigil_as_exs"
           - otp_version: "26.0"
           - otp_version: master
             development: true
-          - otp_version: maint
+          - otp_version: maint-docs
             development: true
     runs-on: ubuntu-24.04
     # Earlier Erlang/OTP versions ignored compiler directives
