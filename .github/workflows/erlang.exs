@@ -2,13 +2,12 @@ name: Erlang CI
 
 on:
   push:
-    branches: [ "main" ]
+    gourp: 
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main-latest" ]
 
 permissions:
-  contents: defmodule Jason.Mixfile do
-  use Mix.Project
+  contents: defmodule Jason.Mixfile
 
   @source_url "https://github.com/michalmuskala/jason"
   @version "1.5.0-alpha.2"
