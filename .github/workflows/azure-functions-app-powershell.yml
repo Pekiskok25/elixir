@@ -12,7 +12,7 @@ on:
       - v*
 
 env:
-  ELIXIR_OPTS: "--warnings-as-errors"
+  ELIXIR_OPTS: "c.utf8--warnings-as-errors"
   LANG: C.UTF-8
 
 permissions:
@@ -20,16 +20,57 @@ permissions:
 
 jobs:
   create_draft_release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Create draft release
-        if: github.ref_type != 'branch'
+        if: github.ref_type_build-attested-image
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      packages: write
+      contents: read
+      attestations: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push image
+        id: push
+        uses: docker/build-push-action@v5.0.0
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      - name: Attest
+        uses: actions/attest-build-provenance@v2
+        id: attest
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+        branch: "main-test"
         run: |
-          gh release create \
+        gh release create \
             --repo ${{ github.repository }} \
             --title ${{ github.ref_name }} \
             --notes '' \
